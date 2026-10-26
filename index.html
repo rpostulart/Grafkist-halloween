@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grafkist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDE3CF;--ink:#2A1F1A;--muted:#6B5A4D;--line:#C9B89C;--panel:#E4D7BE;
+  --glow:#C77A12;--blood:#8A2424;--wood:#2A1E18;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1C1512;--ink:#E9DFCC;--muted:#A08F7F;--line:#3B2E27;--panel:#251C18;
+    --glow:#F0B44C;--blood:#D0574A;--wood:#120C0A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1C1512;--ink:#E9DFCC;--muted:#A08F7F;--line:#3B2E27;--panel:#251C18;
+  --glow:#F0B44C;--blood:#D0574A;--wood:#120C0A;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:34rem;margin:0 auto;padding:1.5rem 1.25rem 3rem}
+h1{font-family:"IM Fell English",Georgia,"Times New Roman",serif;font-weight:400;font-size:clamp(2.8rem,13vw,3.8rem);line-height:.95;margin:.75rem 0 .6rem}
+h2{font-family:"IM Fell English",Georgia,serif;font-weight:400;font-size:1.45rem;margin:2rem 0 .5rem}
+.lede{color:var(--muted);margin:0 0 1.5rem}
+
+/* De deksel met de lichtspleet */
+.lid{position:relative;height:6.5rem;background:var(--wood);border-radius:6px;overflow:hidden;
+  background-image:repeating-linear-gradient(90deg,transparent 0 38px,rgba(255,255,255,.025) 38px 40px)}
+.spleet{position:absolute;left:0;right:0;top:50%;height:2px;transform:translateY(-50%);
+  background:linear-gradient(180deg,transparent,var(--glow) 35%,#FFF3D6 50%,var(--glow) 65%,transparent);
+  box-shadow:0 0 18px 4px color-mix(in srgb,var(--glow) 55%,transparent);transition:height .12s linear}
+.drempel{position:absolute;left:0;right:0;border-top:1px dashed var(--blood);opacity:0;transition:top .2s,opacity .2s}
+.meetregel{display:flex;justify-content:space-between;gap:1rem;margin:.6rem 0 0;font-size:.92rem;color:var(--muted)}
+.meetregel b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+#status{margin:1rem 0 0;padding:.75rem .9rem;border-left:3px solid var(--line);background:var(--panel);border-radius:0 4px 4px 0}
+#status.fout{border-left-color:var(--blood)}
+
+fieldset{border:0;padding:0;margin:0}
+.keuze{display:flex;align-items:flex-start;gap:.6rem;padding:.55rem 0;cursor:pointer}
+.keuze input{margin-top:.3rem;accent-color:var(--blood)}
+.keuze small{display:block;color:var(--muted)}
+input[type=file]{margin:.35rem 0 0 1.6rem;max-width:calc(100% - 1.6rem);font-size:.9rem;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--blood)}
+.knoppen{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.5rem}
+button{font:inherit;font-weight:600;padding:.85rem 1.2rem;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+button.hoofd{background:var(--blood);border-color:var(--blood);color:#FFF7EE;flex:1 1 12rem}
+button:focus-visible,input:focus-visible{outline:3px solid var(--glow);outline-offset:2px}
+button[hidden]{display:none}
+ul.tips{padding-left:1.1rem;margin:.25rem 0;color:var(--muted)}
+ul.tips li{margin:.35rem 0}
+
+#video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+/* Zwart scherm in de doos */
+#nacht{position:fixed;inset:0;background:#000;z-index:50;display:none;align-items:flex-end;justify-content:center;
+  padding-bottom:calc(2rem + env(safe-area-inset-bottom,0px));color:#2B2B2B;font-size:.95rem;text-align:center}
+#nacht.aan{display:flex}
+#nacht span{display:block;font-size:3.5rem;color:#333;font-variant-numeric:tabular-nums;margin-bottom:.5rem}
+@media (prefers-reduced-motion:reduce){.spleet,.drempel{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Grafkist</h1>
+  <p class="lede">Leg de telefoon in de doos. Zodra de deksel een kier opengaat en er licht binnenvalt, klinkt het geluid.</p>
+
+  <div class="lid" aria-hidden="true">
+    <div class="drempel" id="drempelBoven"></div>
+    <div class="drempel" id="drempelOnder"></div>
+    <div class="spleet" id="spleet"></div>
+  </div>
+  <div class="meetregel"><span>Licht nu <b id="waarde">–</b></span><span>Dicht <b id="basisTxt">–</b></span></div>
+  <p id="status" role="status">Nog niet gestart.</p>
+
+  <div class="knoppen">
+    <button class="hoofd" id="startKnop">Start bewaking</button>
+    <button class="hoofd" id="stopKnop" hidden>Stop</button>
+    <button id="zwartKnop" hidden>Scherm zwart</button>
+    <button id="testKnop">Test geluid</button>
+  </div>
+
+  <h2>Geluid</h2>
+  <fieldset>
+    <label class="keuze"><input type="radio" name="bron" value="synth" checked>
+      <span>Ingebouwd eng geluid<small>Krakende deksel, gekreun en een gil.</small></span></label>
+    <label class="keuze"><input type="radio" name="bron" value="eigen">
+      <span>Eigen geluidsbestand<small>Kies een mp3 van je telefoon.</small></span></label>
+    <input type="file" id="bestand" accept="audio/*">
+  </fieldset>
+
+  <h2>Gevoeligheid</h2>
+  <input type="range" id="drempel" min="5" max="60" step="1" value="20" aria-label="Drempel">
+  <div class="meetregel"><span>Gaat sneller af</span><span>Drempel <b id="drempelTxt">20</b></span><span>Pas bij verder open</span></div>
+
+  <h2>Zo leg je hem neer</h2>
+  <ul class="tips">
+    <li>Telefoon met het scherm naar beneden, achtercamera naar de deksel.</li>
+    <li>Druk op Start, je hebt dan 10 seconden om de doos te sluiten. Daarna meet hij hoe donker het is.</li>
+    <li>Volume op maximaal, of koppel een bluetooth-speaker die ook in de doos ligt.</li>
+    <li>Laat de oplader aangesloten: camera en scherm aan kosten veel stroom.</li>
+  </ul>
+</main>
+
+<video id="video" playsinline muted></video>
+<div id="nacht" role="button" tabindex="0" aria-label="Instellingen tonen"><div><span id="nachtGetal"></span><div id="nachtTekst"></div></div></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const video = $('#video');
+const cv = document.createElement('canvas'); cv.width = 32; cv.height = 24;
+const ctx = cv.getContext('2d', { willReadFrequently: true });
+const SCHAAL = 128;
+
+let state = 'idle', basis = null, drempel = 20;
+let stream = null, audioCtx = null, eigenAudio = null, wakeLock = null, loopId = null, speeltTot = 0;
+
+try { const d = localStorage.getItem('grafkist-drempel'); if (d) drempel = +d; } catch (e) {}
+$('#drempel').value = drempel; $('#drempelTxt').textContent = drempel;
+
+function zetStatus(t, fout) { const s = $('#status'); s.textContent = t; s.classList.toggle('fout', !!fout); }
+function nacht(aan) { $('#nacht').classList.toggle('aan', aan); }
+function nachtTekst(getal, tekst) { $('#nachtGetal').textContent = getal; $('#nachtTekst').textContent = tekst; }
+
+function meet() {
+  if (video.readyState < 2) return null;
+  ctx.drawImage(video, 0, 0, 32, 24);
+  const d = ctx.getImageData(0, 0, 32, 24).data;
+  let s = 0;
+  for (let i = 0; i < d.length; i += 4) s += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  return s / (d.length / 4);
+}
+
+function teken(h) {
+  const pct = Math.min(1, h / SCHAAL) * 100;
+  $('#spleet').style.height = Math.max(2, pct * 0.95) + '%';
+  $('#waarde').textContent = h.toFixed(0);
+  if (basis !== null) {
+    const t = Math.min(1, (basis + drempel) / SCHAAL) * 95;
+    $('#drempelBoven').style.top = (50 - t / 2) + '%';
+    $('#drempelOnder').style.top = (50 + t / 2) + '%';
+    $('#drempelBoven').style.opacity = $('#drempelOnder').style.opacity = 1;
+  }
+}
+
+async function zorgAudio() {
+  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state !== 'running') await audioCtx.resume();
+}
+
+function bron() { return document.querySelector('input[name=bron]:checked').value; }
+
+function speel() {
+  if (bron() === 'eigen' && eigenAudio) {
+    eigenAudio.currentTime = 0;
+    eigenAudio.play().catch(() => {});
+  } else {
+    synth();
+    speeltTot = performance.now() + 4500;
+  }
+}
+function speelt() {
+  if (bron() === 'eigen' && eigenAudio) return !eigenAudio.paused && !eigenAudio.ended;
+  return performance.now() < speeltTot;
+}
+
+function synth() {
+  const c = audioCtx, t = c.currentTime;
+  const uit = c.createGain(); uit.gain.value = 0.9; uit.connect(c.destination);
+
+  // Kraak van de deksel
+  const k = c.createOscillator(); k.type = 'sawtooth';
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 6;
+  const gk = c.createGain(); gk.gain.setValueAtTime(0, t);
+  k.connect(bp); bp.connect(gk); gk.connect(uit);
+  for (let i = 0; i < 14; i++) {
+    const ti = t + i * 0.085;
+    k.frequency.setValueAtTime(28 + Math.random() * 55, ti);
+    gk.gain.setValueAtTime(0.55, ti);
+    gk.gain.setValueAtTime(0.06, ti + 0.045);
+  }
+  gk.gain.setValueAtTime(0, t + 1.25);
+  k.start(t); k.stop(t + 1.3);
+
+  // Laag gekreun
+  const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380; lp.connect(uit);
+  const g1 = c.createGain();
+  g1.gain.setValueAtTime(0.0001, t + 0.3);
+  g1.gain.exponentialRampToValueAtTime(0.6, t + 1.1);
+  g1.gain.exponentialRampToValueAtTime(0.0001, t + 4.2);
+  g1.connect(lp);
+  [55, 58.3, 82.4].forEach(f => {
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f, t); o.frequency.linearRampToValueAtTime(f * 0.78, t + 4.2);
+    o.connect(g1); o.start(t); o.stop(t + 4.3);
+  });
+
+  // Gil
+  const ts = t + 1.35;
+  const s = c.createOscillator(); s.type = 'triangle';
+  const lfo = c.createOscillator(); lfo.frequency.value = 7;
+  const lg = c.createGain(); lg.gain.value = 45; lfo.connect(lg); lg.connect(s.frequency);
+  s.frequency.setValueAtTime(650, ts);
+  s.frequency.exponentialRampToValueAtTime(1750, ts + 0.35);
+  s.frequency.exponentialRampToValueAtTime(850, ts + 1.7);
+  const gs = c.createGain();
+  gs.gain.setValueAtTime(0.0001, ts);
+  gs.gain.exponentialRampToValueAtTime(0.35, ts + 0.12);
+  gs.gain.exponentialRampToValueAtTime(0.0001, ts + 1.7);
+  s.connect(gs); gs.connect(uit);
+  s.start(ts); lfo.start(ts); s.stop(ts + 1.8); lfo.stop(ts + 1.8);
+
+  // Adem van ruis onder de gil
+  const len = Math.floor(c.sampleRate * 1.8);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+  const n = c.createBufferSource(); n.buffer = buf;
+  const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.Q.value = 2;
+  nf.frequency.setValueAtTime(1200, ts); nf.frequency.exponentialRampToValueAtTime(3200, ts + 0.4);
+  const gn = c.createGain();
+  gn.gain.setValueAtTime(0.0001, ts);
+  gn.gain.exponentialRampToValueAtTime(0.25, ts + 0.1);
+  gn.gain.exponentialRampToValueAtTime(0.0001, ts + 1.6);
+  n.connect(nf); nf.connect(gn); gn.connect(uit);
+  n.start(ts); n.stop(ts + 1.8);
+}
+
+async function start() {
+  if (!window.isSecureContext || !navigator.mediaDevices) {
+    zetStatus('De camera werkt alleen via een https-adres. Open de pagina via de link in plaats van als gedownload bestand.', true);
+    return;
+  }
+  zetStatus('Camera openen…');
+  try { await zorgAudio(); } catch (e) {}
+  if (eigenAudio) {
+    try { eigenAudio.muted = true; await eigenAudio.play(); eigenAudio.pause(); eigenAudio.currentTime = 0; } catch (e) {}
+    eigenAudio.muted = false;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 320 }, height: { ideal: 240 } }, audio: false
+    });
+  } catch (e) {
+    zetStatus('Geen toegang tot de camera. Sta cameratoegang toe voor deze pagina in Chrome en probeer opnieuw.', true);
+    return;
+  }
+  video.srcObject = stream;
+  try { await video.play(); } catch (e) {}
+  try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+
+  state = 'kalibreren'; basis = null;
+  $('#startKnop').hidden = true; $('#stopKnop').hidden = false; $('#zwartKnop').hidden = false;
+  zetStatus('Sluit de doos. Daarna meet hij 3 seconden hoe donker het is.');
+  nacht(true);
+
+  const t0 = performance.now(); const metingen = [];
+  loopId = setInterval(() => {
+    const h = meet(); if (h == null) return;
+    teken(h);
+    const sec = (performance.now() - t0) / 1000;
+
+    if (state === 'kalibreren') {
+      if (sec < 10) nachtTekst(Math.ceil(10 - sec), 'Sluit de doos');
+      else if (sec < 13) { metingen.push(h); nachtTekst('', 'Meten…'); }
+      else {
+        basis = metingen.reduce((a, b) => a + b, 0) / Math.max(1, metingen.length);
+        $('#basisTxt').textContent = basis.toFixed(0);
+        state = 'bewaakt';
+        nachtTekst('', 'Bewaakt. Tik voor instellingen.');
+        zetStatus('Bewaakt. Gaat af zodra er licht binnenkomt.');
+      }
+    } else if (state === 'bewaakt') {
+      if (h > basis + drempel) {
+        state = 'open'; speel();
+        nachtTekst('', '');
+        zetStatus('Open! Geluid speelt. Wacht tot de doos weer dicht is.');
+      }
+    } else if (state === 'open') {
+      if (h < basis + drempel / 2 && !speelt()) {
+        state = 'bewaakt';
+        nachtTekst('', 'Bewaakt. Tik voor instellingen.');
+        zetStatus('Weer dicht, opnieuw scherp.');
+      }
+    }
+  }, 80);
+}
+
+function stop() {
+  clearInterval(loopId); loopId = null;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  state = 'idle'; nacht(false);
+  $('#startKnop').hidden = false; $('#stopKnop').hidden = true; $('#zwartKnop').hidden = true;
+  zetStatus('Gestopt.');
+}
+
+$('#startKnop').addEventListener('click', start);
+$('#stopKnop').addEventListener('click', stop);
+$('#zwartKnop').addEventListener('click', () => nacht(true));
+$('#nacht').addEventListener('click', () => nacht(false));
+$('#testKnop').addEventListener('click', async () => { try { await zorgAudio(); } catch (e) {} speel(); });
+
+$('#drempel').addEventListener('input', e => {
+  drempel = +e.target.value; $('#drempelTxt').textContent = drempel;
+  try { localStorage.setItem('grafkist-drempel', drempel); } catch (er) {}
+});
+
+$('#bestand').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  eigenAudio = new Audio(URL.createObjectURL(f));
+  document.querySelector('input[name=bron][value=eigen]').checked = true;
+  zetStatus('Eigen geluid geladen: ' + f.name);
+});
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && stream && !wakeLock) {
+    try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+});
+</script>
+</body>
+</html>
